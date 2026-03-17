@@ -236,8 +236,8 @@ internal class GitPreparer(
         var matchingCurrentBranch = !currentBranchName.IsNullOrEmpty()
             ? localBranchesWhereCommitShaIsHead.SingleOrDefault(b =>
             {
-                if (ReferenceName.TryParseGitLabMergeRequestRef(currentBranchName, out var iid))
-                    return b.Name.Canonical == ReferenceName.LocalBranchPrefix + ReferenceName.GitLabMergeRequestFriendlyName(iid);
+                if (ReferenceName.TryParseMergeRequestsRef(currentBranchName, out var mergeRequestId))
+                    return b.Name.Canonical == ReferenceName.LocalBranchPrefix + ReferenceName.MergeRequestsRefFriendlyName(mergeRequestId);
                 return b.Name.Canonical.Replace("/heads/", "/") == currentBranchName.Replace("/heads/", "/");
             })
             : null;
@@ -385,8 +385,8 @@ internal class GitPreparer(
         const string referencePrefix = "refs/";
         var isLocalBranch = currentBranch.StartsWith(ReferenceName.LocalBranchPrefix);
         string localCanonicalName;
-        if (ReferenceName.TryParseGitLabMergeRequestRef(currentBranch, out var gitLabIid))
-            localCanonicalName = ReferenceName.LocalBranchPrefix + ReferenceName.GitLabMergeRequestFriendlyName(gitLabIid);
+        if (ReferenceName.TryParseMergeRequestsRef(currentBranch, out var mergeRequestId))
+            localCanonicalName = ReferenceName.LocalBranchPrefix + ReferenceName.MergeRequestsRefFriendlyName(mergeRequestId);
         else
             localCanonicalName = !currentBranch.StartsWith(referencePrefix)
                 ? ReferenceName.LocalBranchPrefix + currentBranch

@@ -23,7 +23,12 @@ public class ReferenceName : IEquatable<ReferenceName?>, IComparable<ReferenceNa
         "refs/remotes/pull-requests/"
     ];
 
-    private const string GitLabMergeRequestRefPrefix = "refs/merge-requests/";
+    /// <summary>
+    ///     The sole <see cref="PullRequestPrefixes" /> entry for <c>refs/merge-requests/&lt;id&gt;/head|merge</c>.
+    ///     Adding another prefix that also contains <c>/merge-requests/</c> will fail at type initialization.
+    /// </summary>
+    private static readonly string mergeRequestsRefPrefix = PullRequestPrefixes.Single(
+        p => p.Contains("/merge-requests/", StringComparison.Ordinal));
 
     public ReferenceName(string canonical)
     {
@@ -88,22 +93,26 @@ public class ReferenceName : IEquatable<ReferenceName?>, IComparable<ReferenceNa
         || WithoutOrigin.Equals(name, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Detects GitLab MR ref (refs/merge-requests/&lt;iid&gt;/head or /merge) and extracts IID for pull-requests config.
+    /// Parses canonical refs under refs/merge-requests/&lt;id&gt;/head or /merge (convention used by some Git hosts) and extracts the merge-request id.
     /// </summary>
-    public static bool TryParseGitLabMergeRequestRef(string? canonicalRef, out int iid)
+    public static bool TryParseMergeRequestsRef(string? canonicalRef, out int mergeRequestId)
     {
-        iid = 0;
-        if (string.IsNullOrEmpty(canonicalRef) || !canonicalRef.StartsWith(GitLabMergeRequestRefPrefix, StringComparison.Ordinal))
+        mergeRequestId = 0;
+        if (string.IsNullOrEmpty(canonicalRef) || !canonicalRef.StartsWith(mergeRequestsRefPrefix, StringComparison.Ordinal))
             return false;
-        var after = canonicalRef.Substring(GitLabMergeRequestRefPrefix.Length);
+        var after = canonicalRef.Substring(mergeRequestsRefPrefix.Length);
         var slash = after.IndexOf('/');
         if (slash <= 0 || slash >= after.Length - 1) return false;
         var suffix = after[(slash + 1)..];
         if (!suffix.Equals("head", StringComparison.OrdinalIgnoreCase) && !suffix.Equals("merge", StringComparison.OrdinalIgnoreCase))
             return false;
-        return int.TryParse(after.Substring(0, slash), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out iid)
-               && iid > 0;
+        return int.TryParse(after.Substring(0, slash), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out mergeRequestId);
     }
+
+    /// <summary>
+    /// Returns the branch-style name pull-requests/&lt;id&gt; for default pull-request configuration matching.
+    /// </summary>
+    public static string MergeRequestsRefFriendlyName(int mergeRequestId) => $"pull-requests/{mergeRequestId}";
 
     private string Shorten()
     {
@@ -116,8 +125,8 @@ public class ReferenceName : IEquatable<ReferenceName?>, IComparable<ReferenceNa
         if (IsTag)
             return Canonical[TagPrefix.Length..];
 
-        if (TryParseGitLabMergeRequestRef(Canonical, out var iid))
-            return $"pull-requests/{iid}";
+        if (TryParseMergeRequestsRef(Canonical, out var mergeRequestId))
+            return MergeRequestsRefFriendlyName(mergeRequestId);
 
         return Canonical;
     }
