@@ -107,7 +107,7 @@ public class ReferenceName : IEquatable<ReferenceName?>, IComparable<ReferenceNa
         if (!suffix.Equals("head", StringComparison.OrdinalIgnoreCase) && !suffix.Equals("merge", StringComparison.OrdinalIgnoreCase))
             return false;
         return int.TryParse(after.Substring(0, slash), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out mergeRequestId)
-               && iid > 0;
+                && mergeRequestId > 0;
     }
 
     /// <summary>
